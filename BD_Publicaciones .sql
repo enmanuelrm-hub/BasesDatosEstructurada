@@ -7,13 +7,6 @@
 USE master;
 GO
 
-IF DB_ID('BD_Publicaciones') IS NOT NULL
-BEGIN
-    ALTER DATABASE BD_Publicaciones SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE BD_Publicaciones;
-END
-GO
-
 CREATE DATABASE BD_Publicaciones;
 GO
 
@@ -61,40 +54,20 @@ CREATE TABLE Editorial (
 GO
 
 /* ============================================================
-   2. CATÁLOGOS: TipoPublicacion, TipoAutor
-   ============================================================ */
-
-CREATE TABLE TipoPublicacion (
-    Id      INT IDENTITY(1,1) PRIMARY KEY,
-    Nombre  VARCHAR(50) NOT NULL,   -- ej. Libro, Revista, Periodico, Tesis, Otro
-    CONSTRAINT UQ_TipoPublicacion_Nombre UNIQUE (Nombre)
-);
-GO
-
-CREATE TABLE TipoAutor (
-    Id      INT IDENTITY(1,1) PRIMARY KEY,
-    Nombre  VARCHAR(50) NOT NULL,   -- ej. Persona natural, Autor corporativo
-    CONSTRAINT UQ_TipoAutor_Nombre UNIQUE (Nombre)
-);
-GO
-
-/* ============================================================
-   3. ENTIDADES PRINCIPALES: Publicacion, Volumen, Autor, Descriptor
+   2. ENTIDADES PRINCIPALES: Publicacion, Volumen, Autor, Descriptor
    ============================================================ */
 
 CREATE TABLE Publicacion (
-    Id                 INT IDENTITY(1,1) PRIMARY KEY,
-    Nombre             VARCHAR(200) NOT NULL,
-    Descripcion        VARCHAR(500) NULL,
-    AnioLanzamiento    SMALLINT NOT NULL,
-    IdTipoPublicacion  INT NOT NULL,
-    IdEditorial        INT NOT NULL,
-    CONSTRAINT FK_Publicacion_TipoPublicacion FOREIGN KEY (IdTipoPublicacion)
-        REFERENCES TipoPublicacion(Id),
+    Id              INT IDENTITY(1,1) PRIMARY KEY,
+    Nombre          VARCHAR(200) NOT NULL,
+    Descripcion     VARCHAR(500) NULL,
+    AnioLanzamiento INT NOT NULL,
+    Tipo            VARCHAR(20) NOT NULL,   -- Libro, Revista, Periodico, Tesis, etc.
+    IdEditorial     INT NOT NULL,
     CONSTRAINT FK_Publicacion_Editorial FOREIGN KEY (IdEditorial)
         REFERENCES Editorial(Id),
-    CONSTRAINT CK_Publicacion_Anio CHECK (
-        AnioLanzamiento BETWEEN 1400 AND 2100
+    CONSTRAINT CK_Publicacion_Tipo CHECK (
+        Tipo IN ('Libro','Revista','Periodico','Tesis','Otro')
     )
 );
 GO
@@ -111,11 +84,10 @@ GO
 
 -- Autor: incluye tanto personas naturales como autores corporativos
 CREATE TABLE Autor (
-    Id           INT IDENTITY(1,1) PRIMARY KEY,
-    Nombre       VARCHAR(150) NOT NULL,
-    IdTipoAutor  INT NOT NULL,
-    CONSTRAINT FK_Autor_TipoAutor FOREIGN KEY (IdTipoAutor)
-        REFERENCES TipoAutor(Id)
+    Id             INT IDENTITY(1,1) PRIMARY KEY,
+    Nombre         VARCHAR(150) NOT NULL,
+    Tipo           VARCHAR(20) NOT NULL,   -- Persona, Empresa, Institución, etc.
+    EsCorporativo  BIT NOT NULL DEFAULT 0   -- 0 = persona natural, 1 = autor corporativo
 );
 GO
 
@@ -127,7 +99,7 @@ CREATE TABLE Descriptor (
 GO
 
 /* ============================================================
-   4. TABLAS PUENTE (relaciones muchos a muchos)
+   3. TABLAS PUENTE (relaciones muchos a muchos)
    ============================================================ */
 
 -- Una publicación puede tener uno o varios autores, y un autor
